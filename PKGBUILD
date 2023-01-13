@@ -13,11 +13,13 @@ install='shairport-sync.install'
 depends=(alsa-lib libdaemon openssl avahi popt libsoxr libconfig)
 makedepends=(git)
 source=("git+https://github.com/mikebrady/shairport-sync.git"
+        "git+https://github.com/mikebrady/nqptp.git#branch=development"
 	shairport-sync.install
 	shairport-sync.service
 	shairport-sync.conf)
 
 sha1sums=('SKIP'
+          'SKIP'
           'd51485f3857529b70a29b38814ea60e7dde54ca8'
           'fe62feeef1c947ed6ed3500b7b922dcaf9e8987c'
           '6c4979abddb4b1c0242a941279d41617ab8d183c')
@@ -27,13 +29,21 @@ prepare() {
 }
 
 build() {
-  cd shairport-sync
+  cd "$srcdir/nqptp"
+  autoreconf -fi
+  ./configure --prefix=/usr --with-systemd-startup
+  make
+  cd "$srcdir/shairport-sync"
   autoreconf -i -f
-  ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr --without-configfiles --prefix=/usr --sysconfdir=/etc
+  ./configure --with-alsa --with-avahi --with-ssl=openssl --with-soxr --without-configfiles --prefix=/usr --sysconfdir=/etc --with-airplay-2
   make
 }
 
 package() {
+  cd "$srcdir/nqptp"
+  make DESTDIR="$pkgdir/" install
+  
+  
   install -D -m644 shairport-sync.service "$pkgdir/usr/lib/systemd/system/shairport-sync.service"
   install -D -m644 shairport-sync.conf "$pkgdir/etc/conf.d/shairport-sync"
 
@@ -43,4 +53,5 @@ package() {
   make DESTDIR="$pkgdir" install
   install -D -m644 scripts/shairport-sync.conf "$pkgdir/etc/shairport-sync.conf"
   install -D -m644 scripts/shairport-sync.conf "$pkgdir/etc/shairport-sync.conf.sample"
+  
 }
